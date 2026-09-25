@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronDown, Moon, Search, Sun } from "lucide-react";
+import { ChevronDown, Menu, Moon, Search, Sun, X } from "lucide-react";
 
 import logoAsset from "@/assets/sunxtender-logo.png.asset.json";
 import concordeLogo from "@/assets/concorde-logo.png";
@@ -177,8 +177,88 @@ function NavDropdown({
   );
 }
 
+function MobileSection({
+  label,
+  to,
+  items,
+  onNavigate,
+}: {
+  label: string;
+  to: string;
+  items: { label: string; to?: string; href?: string }[];
+  onNavigate: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border last:border-b-0">
+      <div className="flex items-center">
+        <Link
+          to={to}
+          onClick={onNavigate}
+          className="flex-1 px-6 py-3 text-sm font-medium text-foreground"
+        >
+          {label}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label={`${open ? "Collapse" : "Expand"} ${label} submenu`}
+          className="mr-4 inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+            strokeWidth={1.5}
+          />
+        </button>
+      </div>
+      {open && (
+        <div className="border-t border-border bg-surface">
+          {items.map((item) =>
+            item.href ? (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onNavigate}
+                className="block px-8 py-2.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                {item.label}
+              </a>
+            ) : (
+              <Link
+                key={item.to}
+                to={item.to!}
+                onClick={onNavigate}
+                className="block px-8 py-2.5 text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Nav({ overlay = false }: { overlay?: boolean }) {
   const anchor = (l: string) => (overlay ? `#${l.toLowerCase()}` : `/#${l.toLowerCase()}`);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+  const closeMobile = () => setMobileOpen(false);
   return (
     <header
       className={`${
@@ -246,10 +326,73 @@ export function Nav({ overlay = false }: { overlay?: boolean }) {
             <span className="hidden min-[1600px]:inline">Find Your Battery</span>
           </Link>
         </div>
-        <div className="md:hidden">
+        <div className="flex items-center gap-3 md:hidden">
           <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-expanded={mobileOpen}
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            className="inline-flex h-9 w-9 items-center justify-center border border-border-strong text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            {mobileOpen ? (
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            ) : (
+              <Menu className="h-4 w-4" strokeWidth={1.5} />
+            )}
+          </button>
         </div>
       </div>
+      {mobileOpen && (
+        <nav
+          aria-label="Mobile navigation"
+          className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-border bg-white md:hidden dark:bg-background"
+        >
+          <MobileSection
+            label="Products"
+            to="/products"
+            items={PRODUCT_MENU}
+            onNavigate={closeMobile}
+          />
+          <MobileSection
+            label="Applications"
+            to="/applications/grid-tied"
+            items={APPLICATION_MENU}
+            onNavigate={closeMobile}
+          />
+          <MobileSection
+            label="Resources"
+            to="/resources"
+            items={TECHNICAL_MENU}
+            onNavigate={closeMobile}
+          />
+          <MobileSection label="About" to="/about" items={ABOUT_MENU} onNavigate={closeMobile} />
+          <Link
+            to="/contact"
+            onClick={closeMobile}
+            className="block border-b border-border px-6 py-3 text-sm font-medium text-foreground"
+          >
+            Contact
+          </Link>
+          <Link
+            to="/distributors"
+            onClick={closeMobile}
+            className="block border-b border-border px-6 py-3 text-sm font-medium text-foreground"
+          >
+            Distributors
+          </Link>
+          <div className="px-6 py-4">
+            <Link
+              to="/products"
+              onClick={closeMobile}
+              className="inline-flex h-9 items-center gap-2 border border-border-strong px-3 text-xs font-medium tracking-wide uppercase transition-colors hover:border-primary hover:text-primary"
+            >
+              <Search className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+              Find Your Battery
+            </Link>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
